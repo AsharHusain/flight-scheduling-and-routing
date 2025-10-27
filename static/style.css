@@ -223,6 +223,18 @@ button:active {
     transform: translateY(0);
     box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
+
+button.secondary-btn {
+    background: var(--card-bg);
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+button.secondary-btn:hover {
+    background: rgba(99, 102, 241, 0.1);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
 .main-content { 
     flex: 1; 
     display: flex; 
@@ -376,6 +388,54 @@ button:active {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
+.leg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.leg-cost {
+    font-weight: 700;
+    color: var(--success-color);
+    font-size: 1.1rem;
+}
+
+.leg-route {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+.airport-info {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.route-arrow {
+    color: var(--accent-color);
+    font-size: 1.2rem;
+}
+
+.leg-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.leg-details span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
 .airline-code { 
     font-weight: 700; 
     cursor: help;
@@ -387,6 +447,236 @@ button:active {
     font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
     color: var(--accent-color);
+}
+
+/* Collision Panel Styles */
+#collision-panel {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.collision-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.collision-header h2 {
+    margin: 0;
+    font-size: 1.75rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    width: auto;
+    height: auto;
+    margin: 0;
+    transition: all 0.3s ease;
+    box-shadow: none;
+    text-transform: none;
+}
+
+.close-btn:hover {
+    color: var(--error-color);
+    transform: rotate(90deg);
+}
+
+.collision-summary {
+    margin-bottom: 2rem;
+}
+
+.collision-summary h3 {
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--gradient-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card.success {
+    border-left: 4px solid var(--success-color);
+}
+
+.stat-card.error {
+    border-left: 4px solid var(--error-color);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.conflict-breakdown {
+    margin-bottom: 2rem;
+}
+
+.breakdown-list {
+    background: var(--gradient-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.breakdown-item:last-child {
+    border-bottom: none;
+}
+
+.breakdown-label {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.breakdown-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-light);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.failed-flights-section {
+    margin-bottom: 2rem;
+}
+
+.failed-flights-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.failed-flight-badge {
+    background: var(--card-bg);
+    border: 1px solid var(--error-color);
+    color: var(--error-color);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.more-indicator {
+    background: var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-style: italic;
+}
+
+.conflict-details {
+    margin-bottom: 2rem;
+}
+
+.conflicts-list {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.conflict-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: var(--gradient-card);
+    border-left: 3px solid var(--warning-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.conflict-item:last-child {
+    margin-bottom: 0;
+}
+
+.collision-warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+    border: 2px solid var(--warning-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    animation: slideInUp 0.4s ease;
+}
+
+.warning-header {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--warning-color);
+    margin-bottom: 0.75rem;
+}
+
+.conflict-flights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.conflict-badge {
+    background: var(--card-bg);
+    border: 1px solid var(--warning-color);
+    color: var(--warning-color);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.warning-note {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0.5rem 0 0 0;
+    font-style: italic;
 }
 .hidden { display: none !important; }
 
@@ -453,6 +743,53 @@ button:active {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Error Message Styles */
+.error-message {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+    border: 2px solid var(--error-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    animation: slideInUp 0.4s ease;
+}
+
+.error-message h3 {
+    color: var(--error-color);
+    margin: 0 0 0.75rem 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.error-message p {
+    color: var(--text-secondary);
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+    background: none !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.error-message p::before {
+    display: none !important;
+}
+
+.error-suggestions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.error-suggestions ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+    color: var(--text-secondary);
+}
+
+.error-suggestions li {
+    margin: 0.25rem 0;
 }
 
 /* Responsive design */

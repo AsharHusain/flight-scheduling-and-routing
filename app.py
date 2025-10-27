@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 from flask import Flask, render_template, request, jsonify
 from flight_engine import build_graph, find_optimal_path
 from constants import AIRPORT_COORDINATES, AIRLINE_NAMES, AIRPORT_NAMES
+from collision_handler import validate_csv_schedule, CollisionDetector
 
 app = Flask(__name__)
 
@@ -13,7 +14,13 @@ app = Flask(__name__)
 print("Loading flight data and building graph...")
 FLIGHT_DATA_FILE = "data/advanced_flights.csv"
 FLIGHT_GRAPH, AVAILABLE_AIRPORTS = build_graph(FLIGHT_DATA_FILE)
-print("Graph built successfully. Server is ready.")
+print("Graph built successfully.")
+
+# Validate schedule for collisions
+print("Validating flight schedule for conflicts...")
+COLLISION_VALIDATION = validate_csv_schedule(FLIGHT_DATA_FILE)
+print(f"Validation complete: {COLLISION_VALIDATION['successful']}/{COLLISION_VALIDATION['total_flights']} flights conflict-free")
+print("Server is ready.")
 
 def format_path_for_json(path: Optional[List[Dict[str, Any]]]) -> Optional[List[Dict[str, Any]]]:
     """Converts datetime objects in a path to ISO 8601 strings for JSON serialization."""
@@ -66,6 +73,53 @@ def find_routes_api() -> Any:
         results[priority_name] = {"path": format_path_for_json(path), "value": value, "status": "found" if path else "not_found"}
 
     return jsonify(results)
+
+@app.route('/api/collision-report', methods=['GET'])
+def collision_report_api() -> Any:
+    """API endpoint that returns collision detection results."""
+    if not COLLISION_VALIDATION:
+        return jsonify({"error": "Collision validation not available"}), 500
+    
+    return jsonify({
+        "summary": {
+            "total_flights": COLLISION_VALIDATION['total_flights'],
+            "successful": COLLISION_VALIDATION['successful'],
+            "failed": COLLISION_VALIDATION['failed'],
+            "conflict_breakdown": COLLISION_VALIDATION.get('conflict_summary', {})
+        },
+        "conflicts": COLLISION_VALIDATION.get('conflicts', [])[:50],  # Limit to first 50
+        "failed_flights": [f['flight'] for f in COLLISION_VALIDATION.get('failed_flights', [])]
+    })
+
+@app.route('/api/validate-path', methods=['POST'])
+def validate_path_api() -> Any:
+    """API endpoint that validates if a specific flight path has collision issues."""
+    data = request.json
+    flight_numbers = data.get('flight_numbers', [])
+    
+    if not flight_numbers:
+        return jsonify({"error": "No flight numbers provided"}), 400
+    
+    # Check if any of the flights in the path have conflicts
+    failed_flights = {f['flight'] for f in COLLISION_VALIDATION.get('failed_flights', [])}
+    
+    path_conflicts = []
+    for flight_num in flight_numbers:
+        if flight_num in failed_flights:
+            # Find the specific conflicts for this flight
+            for failed in COLLISION_VALIDATION.get('failed_flights', []):
+                if failed['flight'] == flight_num:
+                    path_conflicts.append({
+                        'flight': flight_num,
+                        'conflicts': failed['conflicts']
+                    })
+                    break
+    
+    return jsonify({
+        "flight_count": len(flight_numbers),
+        "conflicts_detected": len(path_conflicts) > 0,
+        "conflicted_flights": path_conflicts
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

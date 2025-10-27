@@ -48,6 +48,9 @@ def _calculate_priority_score(flight: Dict[str, Any], layover: timedelta, prefs:
 
 def find_optimal_path(graph: Graph, start: str, end: str, priority_type: str, prefs: UserPreferences) -> Tuple[Optional[Path], float]:
     """Finds the best flight path using a Dijkstra-like algorithm."""
+    if not graph or start not in graph:
+        return None, float('inf')
+        
     aware_min_time = datetime.min.replace(tzinfo=timezone.utc)
     pq: List[Tuple[float, int, datetime, str, Path]] = [(0.0, 0, aware_min_time, start, [])]
     visited: Dict[Tuple[str, datetime], float] = {}
@@ -56,33 +59,56 @@ def find_optimal_path(graph: Graph, start: str, end: str, priority_type: str, pr
     while pq:
         priority_val, _, arr_time, airport, path = heapq.heappop(pq)
 
-        if visited.get((airport, arr_time), float('inf')) <= priority_val:
+        # Skip if we've already visited this state with a better priority
+        state_key = (airport, arr_time)
+        if state_key in visited and visited[state_key] <= priority_val:
             continue
-        visited[(airport, arr_time)] = priority_val
+        visited[state_key] = priority_val
 
+        # If we reached the destination, return the path
         if airport == end:
             return path, priority_val
 
+        # Explore all flights from current airport
         for flight in graph.get(airport, []):
+            # Skip avoided airlines completely
+            if prefs.get('avoid_airline') and flight['airline'] == prefs.get('avoid_airline'):
+                continue
+                
+            # Check layover time constraint
             layover = flight["departure_utc"] - arr_time
             if path and layover.total_seconds() / 60 < MINIMUM_LAYOVER_MINUTES:
                 continue
 
+            # Build new path
             new_path = path + [flight]
             
+            # Calculate priority based on optimization type
             if priority_type == 'cost':
+                # Sum of all flight costs
                 new_priority_val = priority_val + flight["cost"]
+                # Give discount for preferred airline (reduce the cost added)
+                if prefs.get('preferred_airline') and flight['airline'] == prefs.get('preferred_airline'):
+                    new_priority_val = priority_val + (flight["cost"] * 0.9)  # 10% discount on this leg
+                    
             elif priority_type == 'time':
-                total_duration = flight["arrival_utc"] - new_path[0]["departure_utc"]
-                new_priority_val = total_duration.total_seconds() / 60
-            else: # 'best'
+                # Total duration from first departure to current arrival
+                if len(new_path) == 1:
+                    # First flight - just the flight duration
+                    duration = (flight["arrival_utc"] - flight["departure_utc"]).total_seconds() / 60
+                else:
+                    # Total time from first departure to this arrival
+                    duration = (flight["arrival_utc"] - new_path[0]["departure_utc"]).total_seconds() / 60
+                new_priority_val = duration
+                # Slight preference for preferred airline in time mode
+                if prefs.get('preferred_airline') and flight['airline'] == prefs.get('preferred_airline'):
+                    new_priority_val *= 0.95  # 5% time bonus
+                    
+            else:  # 'best' - balanced score
                 score = _calculate_priority_score(flight, layover if path else timedelta(0), prefs)
                 new_priority_val = priority_val + score
-
-            # Add a large penalty for avoided airlines in cost/time mode to effectively block them
-            if prefs.get('avoid_airline') and flight['airline'] == prefs['avoid_airline'] and priority_type != 'best':
-                new_priority_val += 100000 
             
+            # Add to priority queue
             heapq.heappush(pq, (new_priority_val, next(tie_breaker), flight["arrival_utc"], flight["destination"], new_path))
             
     return None, float('inf')
