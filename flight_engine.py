@@ -1,133 +1,114 @@
+# flight_engine.py
 import csv
 import heapq
 import itertools
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Set, Tuple, Optional, Any
+from constants import MINIMUM_LAYOVER_MINUTES
 
-def time_to_minutes(time_str):
-    """Convert HH:MM string into total minutes"""
-    hours, minutes = map(int, time_str.split(":"))
-    return hours * 60 + minutes
+Graph = Dict[str, List[Dict[str, Any]]]
+Path = List[Dict[str, Any]]
+UserPreferences = Dict[str, Optional[str]]
 
-def flight_duration(departure, arrival):
-    """Calculate flight duration, including overnight flights"""
-    dep_mins = time_to_minutes(departure)
-    arr_mins = time_to_minutes(arrival)
-    if arr_mins <= dep_mins:
-        return (24 * 60 - dep_mins) + arr_mins
-    else:
-        return arr_mins - dep_mins
-
-def build_flight_graph(csv_file):
-    """Create graph from CSV file with airports as nodes"""
-    graph = {}
-    airports = set()
+def build_graph(csv_file: str) -> Tuple[Optional[Graph], Optional[Set[str]]]:
+    """Reads flight data from a CSV and builds a graph representation."""
+    graph: Graph = {}
+    airports: Set[str] = set()
     try:
-        with open(csv_file, newline='') as file:
+        with open(csv_file, newline='', encoding='utf-8') as file:
             reader = csv.DictReader(file)
             for row in reader:
-                origin = row["SourceAirport"].strip().upper()
-                destination = row["DestinationAirport"].strip().upper()
-                cost = int(row["Cost"])
-                flight_no = row["FlightNumber"]
-                duration = flight_duration(row["DepartureTime"], row["ArrivalTime"])
-
-                airports.add(origin)
-                airports.add(destination)
-
-                if origin not in graph:
-                    graph[origin] = []
-                graph[origin].append({
-                    "destination": destination,
-                    "cost": cost,
-                    "duration": duration,
-                    "flight_no": flight_no
-                })
+                source, dest = row["SourceAirport"].strip().upper(), row["DestinationAirport"].strip().upper()
+                dep_str, arr_str = row["DepartureDateTimeUTC"].replace('Z', '+00:00'), row["ArrivalDateTimeUTC"].replace('Z', '+00:00')
+                
+                flight_details = {
+                    "destination": dest, "flight_number": row["FlightNumber"], "airline": row["Airline"],
+                    "departure_utc": datetime.fromisoformat(dep_str), "arrival_utc": datetime.fromisoformat(arr_str),
+                    "cost": int(row["Cost"]), "aircraft": row["AircraftType"],
+                }
+                airports.add(source)
+                airports.add(dest)
+                graph.setdefault(source, []).append(flight_details)
         return graph, airports
-    except FileNotFoundError:
-        print("Error: flights.csv not found!")
-        exit(1)
-    except KeyError as e:
-        print(f"CSV missing expected column: {e}")
-        exit(1)
+    except (FileNotFoundError, KeyError) as e:
+        print(f"Error reading or parsing flight data: {e}")
+        return None, None
 
-def dijkstra(graph, start, end, weight_type="cost"):
-    """Find shortest path using Dijkstra's algorithm"""
-    counter = itertools.count()
-    pq = [(0, next(counter), start, [], [])]  # total, tiebreaker, current, path, flights
-    visited = set()
+def _calculate_priority_score(flight: Dict[str, Any], layover: timedelta, prefs: UserPreferences) -> float:
+    """Calculates a 'best' score based on duration, cost, and user preferences."""
+    score = (flight['arrival_utc'] - flight['departure_utc'] + layover).total_seconds() / 60
+    score += flight['cost'] * 2.0  # Weight cost heavily in the 'best' score
+    
+    if prefs.get('preferred_airline') and flight['airline'] == prefs['preferred_airline']:
+        score *= 0.8  # 20% score reduction for preferred airline
+    if prefs.get('avoid_airline') and flight['airline'] == prefs['avoid_airline']:
+        score *= 1.5  # 50% score penalty for avoided airline
+        
+    return score
+
+def find_optimal_path(graph: Graph, start: str, end: str, priority_type: str, prefs: UserPreferences) -> Tuple[Optional[Path], float]:
+    """Finds the best flight path using a Dijkstra-like algorithm."""
+    if not graph or start not in graph:
+        return None, float('inf')
+        
+    aware_min_time = datetime.min.replace(tzinfo=timezone.utc)
+    pq: List[Tuple[float, int, datetime, str, Path]] = [(0.0, 0, aware_min_time, start, [])]
+    visited: Dict[Tuple[str, datetime], float] = {}
+    tie_breaker = itertools.count()
 
     while pq:
-        total, _, current_airport, path, flights = heapq.heappop(pq)
-        if current_airport in visited:
+        priority_val, _, arr_time, airport, path = heapq.heappop(pq)
+
+        # Skip if we've already visited this state with a better priority
+        state_key = (airport, arr_time)
+        if state_key in visited and visited[state_key] <= priority_val:
             continue
-        visited.add(current_airport)
-        path = path + [current_airport]
+        visited[state_key] = priority_val
 
-        if current_airport == end:
-            return path, total, flights
+        # If we reached the destination, return the path
+        if airport == end:
+            return path, priority_val
 
-        for flight in graph.get(current_airport, []):
-            weight = flight[weight_type]
-            heapq.heappush(pq, (total + weight, next(counter), flight["destination"], path, flights + [flight]))
+        # Explore all flights from current airport
+        for flight in graph.get(airport, []):
+            # Skip avoided airlines completely
+            if prefs.get('avoid_airline') and flight['airline'] == prefs.get('avoid_airline'):
+                continue
+                
+            # Check layover time constraint
+            layover = flight["departure_utc"] - arr_time
+            if path and layover.total_seconds() / 60 < MINIMUM_LAYOVER_MINUTES:
+                continue
 
-    return None, float("inf"), []
-
-def format_duration(minutes):
-    """Format minutes into hours and minutes string"""
-    hours = minutes // 60
-    mins = minutes % 60
-    return f"{hours}h {mins}m"
-
-if __name__ == "__main__":
-    graph, airports = build_flight_graph("flights.csv")
-
-    start_airport = input("Enter starting airport code: ").strip().upper()
-    end_airport = input("Enter destination airport code: ").strip().upper()
-
-    if start_airport not in airports:
-        print(f"{start_airport} not found in airport list.")
-    elif end_airport not in airports:
-        print(f"{end_airport} not found in airport list.")
-    else:
-        # Cheapest path
-        cheapest_path, total_cost, cheapest_flights = dijkstra(graph, start_airport, end_airport, "cost")
-        print("\n=== Cheapest Route ===")
-        if cheapest_path:
-            for idx, flight in enumerate(cheapest_flights):
-                print(f"{flight['flight_no']}: {cheapest_path[idx]} -> {flight['destination']}, Cost: ${flight['cost']}, Duration: {format_duration(flight['duration'])}")
-            print(f"Total cost: ${total_cost}")
-        else:
-            print("No route found.")
-
-        # Fastest path
-        fastest_path, total_duration, fastest_flights = dijkstra(graph, start_airport, end_airport, "duration")
-        print("\n=== Fastest Route ===")
-        if fastest_path:
-            for idx, flight in enumerate(fastest_flights):
-                print(f"{flight['flight_no']}: {fastest_path[idx]} -> {flight['destination']}, Cost: ${flight['cost']}, Duration: {format_duration(flight['duration'])}")
-            print(f"Total time: {format_duration(total_duration)}")
-        else:
-            print("No route found.")
-
-        # Most efficient path (Cost per minute)
-        print("\n=== Best Value Route (Cost/Time) ===")
-        if not cheapest_path and not fastest_path:
-            print("No routes available.")
-        else:
-            cheapest_duration = sum(f["duration"] for f in cheapest_flights) if cheapest_path else 0
-            fastest_total_cost = sum(f["cost"] for f in fastest_flights) if fastest_path else float("inf")
-
-            efficiency_cheapest = total_cost / cheapest_duration if cheapest_duration > 0 else float("inf")
-            efficiency_fastest = fastest_total_cost / total_duration if total_duration > 0 else float("inf")
-
-            if efficiency_cheapest <= efficiency_fastest and cheapest_path:
-                print(f"Efficiency: ${efficiency_cheapest:.2f}/min")
-                for idx, flight in enumerate(cheapest_flights):
-                    print(f"{flight['flight_no']}: {cheapest_path[idx]} -> {flight['destination']}, Cost: ${flight['cost']}, Duration: {format_duration(flight['duration'])}")
-                print(f"Total cost: ${total_cost}")
-                print(f"Total time: {format_duration(cheapest_duration)}")
-            elif fastest_path:
-                print(f"Efficiency: ${efficiency_fastest:.2f}/min")
-                for idx, flight in enumerate(fastest_flights):
-                    print(f"{flight['flight_no']}: {fastest_path[idx]} -> {flight['destination']}, Cost: ${flight['cost']}, Duration: {format_duration(flight['duration'])}")
-                print(f"Total cost: ${fastest_total_cost}")
-                print(f"Total time: {format_duration(total_duration)}")
+            # Build new path
+            new_path = path + [flight]
+            
+            # Calculate priority based on optimization type
+            if priority_type == 'cost':
+                # Sum of all flight costs
+                new_priority_val = priority_val + flight["cost"]
+                # Give discount for preferred airline (reduce the cost added)
+                if prefs.get('preferred_airline') and flight['airline'] == prefs.get('preferred_airline'):
+                    new_priority_val = priority_val + (flight["cost"] * 0.9)  # 10% discount on this leg
+                    
+            elif priority_type == 'time':
+                # Total duration from first departure to current arrival
+                if len(new_path) == 1:
+                    # First flight - just the flight duration
+                    duration = (flight["arrival_utc"] - flight["departure_utc"]).total_seconds() / 60
+                else:
+                    # Total time from first departure to this arrival
+                    duration = (flight["arrival_utc"] - new_path[0]["departure_utc"]).total_seconds() / 60
+                new_priority_val = duration
+                # Slight preference for preferred airline in time mode
+                if prefs.get('preferred_airline') and flight['airline'] == prefs.get('preferred_airline'):
+                    new_priority_val *= 0.95  # 5% time bonus
+                    
+            else:  # 'best' - balanced score
+                score = _calculate_priority_score(flight, layover if path else timedelta(0), prefs)
+                new_priority_val = priority_val + score
+            
+            # Add to priority queue
+            heapq.heappush(pq, (new_priority_val, next(tie_breaker), flight["arrival_utc"], flight["destination"], new_path))
+            
+    return None, float('inf')

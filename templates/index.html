@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✈️ Flight Dashboard - Route Analysis</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <header>
+                <h1>✈️ Flight Dashboard</h1>
+                <p>Intelligent Route Analysis</p>
+            </header>
+            <form id="flight-form">
+                <div class="form-group">
+                    <label for="start-airport">From</label>
+                    <select id="start-airport" required>
+                        <option value="">Select departure airport</option>
+                        {% for airport in airports %}
+                            <option value="{{ airport }}">{{ airport_name_data.get(airport, airport) }} ({{ airport }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="end-airport">To</label>
+                    <select id="end-airport" required>
+                        <option value="">Select destination airport</option>
+                        {% for airport in airports %}
+                            <option value="{{ airport }}">{{ airport_name_data.get(airport, airport) }} ({{ airport }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <fieldset>
+                    <legend>Preferences</legend>
+                    <div class="form-group">
+                        <label for="preferred-airline">Preferred Airline</label>
+                        <select id="preferred-airline">
+                            <option value="">Any</option>
+                            {% for code, name in airline_data.items() %}
+                                <option value="{{ code }}">{{ name }} ({{ code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="avoid-airline">Avoid Airline</label>
+                        <select id="avoid-airline">
+                            <option value="">None</option>
+                             {% for code, name in airline_data.items() %}
+                                <option value="{{ code }}">{{ name }} ({{ code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </fieldset>
+                <button type="submit" id="submit-btn">Analyze Routes</button>
+                <button type="button" id="view-collisions-btn" class="secondary-btn">View Schedule Conflicts</button>
+            </form>
+        </aside>
+        <main class="main-content">
+            <div id="map"></div>
+            
+            <div id="results-panel">
+                <div id="loading-spinner" class="hidden"></div>
+                <div id="results-tabs" class="hidden">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-tab="cheapest">💰 Cheapest</button>
+                        <button class="tab-btn" data-tab="fastest">⚡ Fastest</button>
+                        <button class="tab-btn" data-tab="best">⭐ Best Value</button>
+                    </div>
+                    <div class="tab-content">
+                        <div id="cheapest" class="tab-pane active"></div>
+                        <div id="fastest" class="tab-pane"></div>
+                        <div id="best" class="tab-pane"></div>
+                    </div>
+                </div>
+                <div id="collision-panel" class="hidden">
+                    <div class="collision-header">
+                        <h2>🔍 Schedule Collision Analysis</h2>
+                        <button id="close-collision-btn" class="close-btn">✕</button>
+                    </div>
+                    <div id="collision-content">
+                        <div id="collision-loading" class="hidden">Loading collision data...</div>
+                        <div id="collision-data"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        // Initialize constants - will be loaded via API to avoid JSON parsing issues
+        let airlineNames = {};
+        let airportCoordinates = {};
+        let airportNames = {};
+        
+        // Load constants immediately when page loads
+        fetch('/api/constants')
+            .then(response => response.json())
+            .then(data => {
+                airlineNames = data.airlineNames;
+                airportCoordinates = data.airportCoordinates;
+                airportNames = data.airportNames;
+                console.log('✅ Constants loaded successfully');
+            })
+            .catch(error => {
+                console.error('❌ Error loading constants:', error);
+                // Fallback empty objects to prevent errors
+                airlineNames = {};
+                airportCoordinates = {};
+                airportNames = {};
+            });
+    </script>
+    <script src="/static/script.js"></script>
+</body>
+</html>

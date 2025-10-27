@@ -1,0 +1,26 @@
+nohup: ignoring input
+Loading flight data and building graph...
+Graph built successfully. Server is ready.
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 345-888-348
+127.0.0.1 - - [03/Oct/2025 15:34:58] "GET /api/constants HTTP/1.1" 200 -
+127.0.0.1 - - [03/Oct/2025 15:34:58] "POST /api/find-routes HTTP/1.1" 200 -
+127.0.0.1 - - [03/Oct/2025 15:35:06] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [03/Oct/2025 15:35:06] "GET /static/style.css HTTP/1.1" 304 -
+127.0.0.1 - - [03/Oct/2025 15:35:06] "GET /static/script.js HTTP/1.1" 304 -
+127.0.0.1 - - [03/Oct/2025 15:35:06] "GET /api/constants HTTP/1.1" 200 -
+127.0.0.1 - - [03/Oct/2025 15:35:17] "POST /api/find-routes HTTP/1.1" 200 -
+ * Detected change in '/home/ash/Documents/CollegeStuff/DS-2 Mini Project/app.py', reloading
+Loading flight data and building graph...
+Graph built successfully. Server is ready.
+API call received: Find routes from JFK to LAX with prefs: {}
+API call received: Find routes from DFW to SYD with prefs: {'preferred_airline': 'AF', 'avoid_airline': 'BA'}
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 345-888-348

@@ -1,0 +1,11 @@
+{
+  "name": "flight-scheduling-and-routing",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    
+  }
+}
